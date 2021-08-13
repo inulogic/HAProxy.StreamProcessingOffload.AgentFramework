@@ -6,8 +6,8 @@ EXPOSE 443
 FROM mcr.microsoft.com/dotnet/sdk:5.0 AS build
 WORKDIR /src
 COPY ["example/agent/Agent.csproj", "example/agent/"]
-COPY ["HAProxy.Spoe.AgentFramework/HAProxy.Spoe.AgentFramework.csproj", "HAProxy.Spoe.AgentFramework/"]
-RUN dotnet restore "examples/agent/Agent.csproj"
+COPY ["HAProxy.StreamProcessingOffload.AgentFramework/HAProxy.StreamProcessingOffload.AgentFramework.csproj", "HAProxy.StreamProcessingOffload.AgentFramework/"]
+RUN dotnet restore "example/agent/Agent.csproj"
 COPY . .
 WORKDIR "/src/example/agent"
 RUN dotnet build "Agent.csproj" -c Release -o /app/build

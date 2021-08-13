@@ -7,11 +7,10 @@ services:
     container_name: web
 
   agent:
-    image: ${DOCKER_REGISTRY-}agent
+    image: agent
     build:
       context: ..
-      dockerfile: agent/Dockerfile
-
+      dockerfile: example/agent/Dockerfile
 
   haproxy:
     image: haproxy:lts
