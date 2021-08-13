@@ -14,7 +14,7 @@ namespace Agent
 
             foreach (var myMessage in messages)
             {
-                if (myMessage.Name == "my-message-name")
+                if (myMessage.Name == "check-client-ip")
                 {
                     int ip_score = 10;
 

@@ -1,0 +1,10 @@
+
+version: '3.4'
+
+services:
+  agent:
+    image: agent_haproxy_spoa_example_c
+    build:
+      context: ..
+      dockerfile: example/agent_haproxy_spoa_example_c/Dockerfile
+    command: -c pipelining -p 12345
