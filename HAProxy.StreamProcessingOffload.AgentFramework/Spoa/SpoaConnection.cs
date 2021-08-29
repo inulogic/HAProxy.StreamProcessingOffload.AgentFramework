@@ -23,6 +23,7 @@ namespace HAProxy.StreamProcessingOffload.AgentFramework.Spoa
         private readonly SpopFrameProducer _output;
         private readonly Pipe _input;
         private Task _inputTask;
+        private ExecutionContext _initialExecutionContext;
         private readonly int _minAllocBufferSize;
 
         private readonly SpopPeerSettings _mySettings = SpopPeerSettings.AgentSettings;
@@ -57,6 +58,9 @@ namespace HAProxy.StreamProcessingOffload.AgentFramework.Spoa
             _minAllocBufferSize = _memoryPool.GetMinimumAllocSize();
 
             _inputTask = ReadInputAsync();
+
+            // Capture the ExecutionContext so it can be restored in the stream thread
+            _initialExecutionContext = ExecutionContext.Capture();
         }
 
         public PipeReader Input => _input.Reader;
@@ -291,7 +295,7 @@ namespace HAProxy.StreamProcessingOffload.AgentFramework.Spoa
             // TODO: stream should expire
             var stream = new SpoaFrameStream(this.logger, application);
 
-            stream.Initialize(_frameWriter, _memoryPool, this, _incomingFrame.StreamId, _incomingFrame.FrameId, _negotiatedSettings);
+            stream.Initialize(_frameWriter, _memoryPool, _initialExecutionContext, this, _incomingFrame.StreamId, _incomingFrame.FrameId, _negotiatedSettings);
             return stream;
         }
 

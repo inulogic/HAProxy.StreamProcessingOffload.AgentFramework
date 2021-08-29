@@ -30,6 +30,7 @@ namespace HAProxy.StreamProcessingOffload.AgentFramework.Spoa
         private SpopFrameProducer _output;
 
         private SpopPeerSettings _peerSettings;
+        private ExecutionContext _initialExecutionContext;
 
         public SpoaFrameStream(ILogger logger, ISpoaApplication application)
         {
@@ -40,6 +41,7 @@ namespace HAProxy.StreamProcessingOffload.AgentFramework.Spoa
         public void Initialize(
             SpopFrameWriter writer,
             MemoryPool<byte> memoryPool,
+            ExecutionContext initialExecutionContext,
             ISpopFrameStreamLifetimeHandler streamLifetimeHandler,
             long streamId, long frameId, SpopPeerSettings peerSettings)
         {
@@ -53,6 +55,7 @@ namespace HAProxy.StreamProcessingOffload.AgentFramework.Spoa
                 _writer = writer;
                 _output = new SpopFrameProducer(_logger, _writer);
                 _peerSettings = peerSettings;
+                _initialExecutionContext = initialExecutionContext;
 
                 _memoryPool = memoryPool;
                 PayloadPipe = CreatePayloadPipe();
@@ -65,6 +68,7 @@ namespace HAProxy.StreamProcessingOffload.AgentFramework.Spoa
                 _writer = writer;
                 _output = new SpopFrameProducer(_logger, _writer);
                 _peerSettings = peerSettings;
+                _initialExecutionContext = initialExecutionContext;
 
                 PayloadPipe.Reset();
             }
@@ -77,6 +81,9 @@ namespace HAProxy.StreamProcessingOffload.AgentFramework.Spoa
 
         private async Task ProcessPayloadAsync(ISpoaApplication application)
         {
+            // restore connection context (mainly for logging scope)
+            ExecutionContext.Restore(_initialExecutionContext);
+
             try
             {
                 // Read will resume only when pipe is completed with a complete notify frame
