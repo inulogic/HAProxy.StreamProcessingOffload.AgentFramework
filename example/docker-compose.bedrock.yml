@@ -1,0 +1,9 @@
+
+version: '3.4'
+
+services:
+  agent:
+    image: agent:bedrock
+    build:
+      context: ..
+      dockerfile: example/agent_bedrock/Dockerfile

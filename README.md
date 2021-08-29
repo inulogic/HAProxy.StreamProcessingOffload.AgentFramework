@@ -32,6 +32,8 @@ User-Agent: curl/7.68.0
 Accept: */*
 ```
 
+You may want to test bedrock flavor with `docker compose -f docker-compose.yml -f docker-compose.bedrock.yml up -d` or compare performance with the c sample with `docker compose -f docker-compose.yml -f docker-compose.spoa-example.yml up -d`.
+
 ## Usage
 
 1. Add a SpoaApplication class to handle messages sent by HAProxy and return actions
@@ -49,7 +51,7 @@ Accept: */*
                 {
                     int ip_score = 10;
 
-                    if ("127.0.0.1" == (string)myMessage.Args["ip"]) ip_score = 20;
+                    if (IPAddress.IsLoopback((IPAddress)myMessage.Args["ip"])) ip_score = 20;
 
                     SpopAction setVar = new SetVarAction(VarScope.Request, "ip_score", ip_score);
                     responseActions.Add(setVar);
