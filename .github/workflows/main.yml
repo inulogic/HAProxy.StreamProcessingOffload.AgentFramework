@@ -1,0 +1,65 @@
+name: .NET
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 6.0.x
+      - uses: actions/setup-node@v2
+        with:
+          node-version: "16"
+      - name: extract next semantic release version
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NUGET_TOKEN: ${{ secrets.NUGET_TOKEN }}
+        run: |
+          set -Eeuo pipefail
+          semanticReleaseOutput=$(npx \
+              --quiet \
+              -p semantic-release@18.0.1 \
+              -p @semantic-release/changelog@6.0.1 \
+              -p @semantic-release/release-notes-generator@10.0.3 \
+              -p @semantic-release/git@10.0.1 \
+              -p @semantic-release/github@8.0.2 \
+              -p @semantic-release/exec@6.0.3 \
+              semantic-release --dry-run)
+          nextVersion=$(echo "$semanticReleaseOutput" \
+            | sed -n 's/.* The next release version is \(.*\)$/\1/gip')
+          echo "$semanticReleaseOutput"
+
+          if [ -z "$nextVersion" ]
+          then
+              echo "nextVersionNumber=0.0.0" >> $GITHUB_ENV
+          else
+              echo "The next release version is ${nextVersion}"
+              echo "nextVersionNumber=$nextVersion" >> $GITHUB_ENV
+          fi
+      - name: Cake 🍰 - Build & Test
+        run: |
+          dotnet tool restore
+          dotnet cake --versionNumber=${{ env.nextVersionNumber}}
+        env:
+          DOTNET_CLI_TELEMETRY_OPTOUT: true
+          DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+      - name: semantic release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NUGET_TOKEN: ${{ secrets.NUGET_TOKEN }}
+        run: >-
+          npx --quiet
+          -p semantic-release@18.0.1
+          -p @semantic-release/changelog@6.0.1
+          -p @semantic-release/release-notes-generator@10.0.3
+          -p @semantic-release/git@10.0.1
+          -p @semantic-release/github@8.0.2
+          -p @semantic-release/exec@6.0.3
+          semantic-release
