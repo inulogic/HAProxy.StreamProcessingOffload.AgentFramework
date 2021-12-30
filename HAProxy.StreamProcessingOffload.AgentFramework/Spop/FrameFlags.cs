@@ -1,12 +1,10 @@
-﻿using System;
+namespace HAProxy.StreamProcessingOffload.AgentFramework.Spop;
+using System;
 
-namespace HAProxy.StreamProcessingOffload.AgentFramework.Spop
+[Flags]
+public enum Frame : byte
 {
-    [Flags]
-    public enum FrameFlags : byte
-    {
-        None = 0x0000,
-        Fin = 0x0001,
-        Abort = 0x0010
-    }
+    None = 0x0000,
+    Fin = 0x0001,
+    Abort = 0x0010
 }

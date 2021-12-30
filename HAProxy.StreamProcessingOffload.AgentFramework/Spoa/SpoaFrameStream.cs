@@ -1,170 +1,169 @@
-﻿using HAProxy.StreamProcessingOffload.AgentFramework.Spop;
-using Microsoft.Extensions.Logging;
+namespace HAProxy.StreamProcessingOffload.AgentFramework.Spoa;
 using System;
 using System.Buffers;
 using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
+using HAProxy.StreamProcessingOffload.AgentFramework.Spop;
+using Microsoft.Extensions.Logging;
 
-namespace HAProxy.StreamProcessingOffload.AgentFramework.Spoa
+// class to process notify frame
+internal class SpoaFrameStream : IThreadPoolWorkItem
 {
-    // class to process notify frame
-    internal class SpoaFrameStream : IThreadPoolWorkItem
+    private readonly ISpoaApplication application;
+    private readonly ILogger logger;
+
+    // allow to buffer the payload
+    private Pipe PayloadPipe { get; set; }
+
+    private PipeReader Input => this.PayloadPipe.Reader;
+
+    private MemoryPool<byte> memoryPool;
+    private SpopFrameWriter writer;
+
+    public long StreamId { get; private set; }
+    public long FrameId { get; private set; }
+
+    private ISpopFrameStreamLifetimeHandler streamLifetimeHandler;
+
+    private SpopFrameProducer output;
+
+    private SpopPeerSettings peerSettings;
+    private ExecutionContext initialExecutionContext;
+
+    public SpoaFrameStream(ILogger logger, ISpoaApplication application)
     {
-        private readonly ISpoaApplication _application;
-        private readonly ILogger _logger;
+        this.logger = logger;
+        this.application = application;
+    }
 
-        // allow to buffer the payload
-        private Pipe PayloadPipe { get; set; }
+    public void Initialize(
+        SpopFrameWriter writer,
+        MemoryPool<byte> memoryPool,
+        ExecutionContext initialExecutionContext,
+        ISpopFrameStreamLifetimeHandler streamLifetimeHandler,
+        long streamId, long frameId, SpopPeerSettings peerSettings)
+    {
+        this.streamLifetimeHandler = streamLifetimeHandler;
 
-        private PipeReader Input => PayloadPipe.Reader;
-
-        private MemoryPool<byte> _memoryPool;
-        private SpopFrameWriter _writer;
-
-        public long StreamId { get; private set; }
-        public long FrameId { get; private set; }
-
-        private ISpopFrameStreamLifetimeHandler _streamLifetimeHandler;
-
-        private SpopFrameProducer _output;
-
-        private SpopPeerSettings _peerSettings;
-        private ExecutionContext _initialExecutionContext;
-
-        public SpoaFrameStream(ILogger logger, ISpoaApplication application)
+        if (this.PayloadPipe == null)
         {
-            _logger = logger;
-            _application = application;
+            this.StreamId = streamId;
+            this.FrameId = frameId;
+
+            this.writer = writer;
+            this.output = new SpopFrameProducer(this.logger, this.writer);
+            this.peerSettings = peerSettings;
+            this.initialExecutionContext = initialExecutionContext;
+
+            this.memoryPool = memoryPool;
+            this.PayloadPipe = this.CreatePayloadPipe();
         }
-
-        public void Initialize(
-            SpopFrameWriter writer,
-            MemoryPool<byte> memoryPool,
-            ExecutionContext initialExecutionContext,
-            ISpopFrameStreamLifetimeHandler streamLifetimeHandler,
-            long streamId, long frameId, SpopPeerSettings peerSettings)
+        else
         {
-            _streamLifetimeHandler = streamLifetimeHandler;
+            this.StreamId = streamId;
+            this.FrameId = frameId;
 
-            if (PayloadPipe == null)
-            {
-                StreamId = streamId;
-                FrameId = frameId;
+            this.writer = writer;
+            this.output = new SpopFrameProducer(this.logger, this.writer);
+            this.peerSettings = peerSettings;
+            this.initialExecutionContext = initialExecutionContext;
 
-                _writer = writer;
-                _output = new SpopFrameProducer(_logger, _writer);
-                _peerSettings = peerSettings;
-                _initialExecutionContext = initialExecutionContext;
-
-                _memoryPool = memoryPool;
-                PayloadPipe = CreatePayloadPipe();
-            }
-            else
-            {
-                StreamId = streamId;
-                FrameId = frameId;
-
-                _writer = writer;
-                _output = new SpopFrameProducer(_logger, _writer);
-                _peerSettings = peerSettings;
-                _initialExecutionContext = initialExecutionContext;
-
-                PayloadPipe.Reset();
-            }
+            this.PayloadPipe.Reset();
         }
+    }
 
-        public void Execute()
+    public void Execute() => _ = this.ProcessPayloadAsync(this.application);
+
+    private async Task ProcessPayloadAsync(ISpoaApplication application)
+    {
+        // restore connection context (mainly for logging scope)
+        ExecutionContext.Restore(this.initialExecutionContext);
+
+        try
         {
-            _ = ProcessPayloadAsync(_application);
-        }
-
-        private async Task ProcessPayloadAsync(ISpoaApplication application)
-        {
-            // restore connection context (mainly for logging scope)
-            ExecutionContext.Restore(_initialExecutionContext);
-
-            try
+            // Read will resume only when pipe is completed with a complete notify frame
+            ReadResult readResult;
+            while (true)
             {
-                // Read will resume only when pipe is completed with a complete notify frame
-                ReadResult readResult;
-                while (true)
+                readResult = await this.Input.ReadAsync();
+
+                if (readResult.IsCanceled)
                 {
-                    readResult = await Input.ReadAsync();
+                    break;
+                }
 
-                    if (readResult.IsCanceled) break;
-                    if (!readResult.IsCompleted) continue;
+                if (!readResult.IsCompleted)
+                {
+                    continue;
+                }
 
-                    var buffer = readResult.Buffer;
+                var buffer = readResult.Buffer;
+
+                try
+                {
+                    FrameReader.DecodeListOfMessagesPayload(readResult.Buffer, out var messages);
 
                     try
                     {
-                        FrameReader.DecodeListOfMessagesPayload(readResult.Buffer, out var messages);
+                        var actions = await application.ProcessMessagesAsync(this.StreamId, messages);
 
-                        try
-                        {
-                            var actions = await application.ProcessMessagesAsync(StreamId, messages);
-
-                            await _output.WriteAgentAckAsync(StreamId, FrameId, actions, _peerSettings);
-                        }
-                        catch(Exception ex)
-                        {
-                            // level debug to avoid log flooding if reccuring errors under heavy load
-                            _logger.LogDebug(ex, "error processing message");
-                            // SPOP has no frame type to notify an error occured for a given frame only
-                            // there is nothing we can do apart letting the frame timeout on engine side
-                            // await _output.WriteAgentAckAsync(StreamId, FrameId, Enumerable.Empty<SpopAction>(), _peerSettings);
-                        }
-
-                        break;
+                        await this.output.WriteAgentAckAsync(this.StreamId, this.FrameId, actions, this.peerSettings);
                     }
-                    finally
+                    catch (Exception ex)
                     {
-                        PayloadPipe.Reader.AdvanceTo(readResult.Buffer.End, readResult.Buffer.End);
+                        // level debug to avoid log flooding if reccuring errors under heavy load
+                        this.logger.LogDebug(ex, "error processing message");
+                        // SPOP has no frame type to notify an error occured for a given frame only
+                        // there is nothing we can do apart letting the frame timeout on engine side
+                        // await _output.WriteAgentAckAsync(StreamId, FrameId, Enumerable.Empty<SpopAction>(), _peerSettings);
                     }
+
+                    break;
+                }
+                finally
+                {
+                    this.PayloadPipe.Reader.AdvanceTo(readResult.Buffer.End, readResult.Buffer.End);
                 }
             }
-            finally
-            {
-                await PayloadPipe.Reader.CompleteAsync();
-
-                // allow this stream to be returned
-                _streamLifetimeHandler.OnStreamCompleted(this);
-            }
         }
-
-        public Task OnDataAsync(in ReadOnlySequence<byte> payload, bool completed)
+        finally
         {
-            foreach (var segment in payload)
-            {
-                PayloadPipe.Writer.Write(segment.Span);
-            }
+            await this.PayloadPipe.Reader.CompleteAsync();
 
-            if (!completed)
-            {
-                // Flushing is not necessary as the reader will let the buffer grows until the frame is completed
-                return Task.CompletedTask;
-            }
-            else
-            {
-                // frame is complete, flush and complete will resume the reader thread
-                return PayloadPipe.Writer.CompleteAsync().AsTask();
-            }
-        }
-
-        private Pipe CreatePayloadPipe()
-            => new Pipe(new PipeOptions
-            (
-                pool: _memoryPool,
-                readerScheduler: PipeScheduler.ThreadPool,
-                writerScheduler: PipeScheduler.Inline,
-                useSynchronizationContext: false,
-                minimumSegmentSize: _memoryPool.GetMinimumSegmentSize()
-            ));
-
-        public void Abort()
-        {
-            Input.CancelPendingRead();
+            // allow this stream to be returned
+            this.streamLifetimeHandler.OnStreamCompleted(this);
         }
     }
+
+    public Task OnDataAsync(in ReadOnlySequence<byte> payload, bool completed)
+    {
+        foreach (var segment in payload)
+        {
+            this.PayloadPipe.Writer.Write(segment.Span);
+        }
+
+        if (!completed)
+        {
+            // Flushing is not necessary as the reader will let the buffer grows until the frame is completed
+            return Task.CompletedTask;
+        }
+        else
+        {
+            // frame is complete, flush and complete will resume the reader thread
+            return this.PayloadPipe.Writer.CompleteAsync().AsTask();
+        }
+    }
+
+    private Pipe CreatePayloadPipe()
+        => new(new PipeOptions
+        (
+            pool: this.memoryPool,
+            readerScheduler: PipeScheduler.ThreadPool,
+            writerScheduler: PipeScheduler.Inline,
+            useSynchronizationContext: false,
+            minimumSegmentSize: this.memoryPool.GetMinimumSegmentSize()
+        ));
+
+    public void Abort() => this.Input.CancelPendingRead();
 }

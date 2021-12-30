@@ -1,5 +1,4 @@
-using HAProxy.StreamProcessingOffload.AgentFramework.Spop;
-using Microsoft.Extensions.Logging.Abstractions;
+namespace HAProxy.StreamProcessingOffload.AgentFramework.Tests;
 using System;
 using System.Buffers;
 using System.Collections.Generic;
@@ -7,151 +6,151 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using HAProxy.StreamProcessingOffload.AgentFramework.Spop;
+using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
-namespace HAProxy.StreamProcessingOffload.AgentFramework.Tests
+public class SpoaFrameworkConnectionHandlerTests
 {
-    public class SpoaFrameworkConnectionHandlerTests
+    [Fact]
+    public async Task EngineCanConnectAndClose()
     {
-        [Fact]
-        public async Task EngineCanConnectAndClose()
+        // https://github.com/dotnet/aspnetcore/blob/52eff90fbcfca39b7eb58baad597df6a99a542b0/src/SignalR/server/SignalR/test/HubConnectionHandlerTestUtils/Utils.cs
+        var handler = new SpoaFrameworkConnectionHandler(NullLogger<SpoaFrameworkConnectionHandler>.Instance, new TestSpoaApplication());
+
+        using (var engine = new TestEngine())
         {
-            // https://github.com/dotnet/aspnetcore/blob/52eff90fbcfca39b7eb58baad597df6a99a542b0/src/SignalR/server/SignalR/test/HubConnectionHandlerTestUtils/Utils.cs
-            var handler = new SpoaFrameworkConnectionHandler(NullLogger<SpoaFrameworkConnectionHandler>.Instance, new TestSpoaApplication());
+            var connectionHandlerTask = handler.OnConnectedAsync(engine.Connection);
 
-            using (var engine = new TestEngine())
-            {
-                var connectionHandlerTask = handler.OnConnectedAsync(engine.Connection);
+            // kill the connection
+            engine.Dispose();
 
-                // kill the connection
-                engine.Dispose();
-
-                await connectionHandlerTask;
-            }
+            await connectionHandlerTask;
         }
+    }
 
-        [Fact]
-        public async Task EngineCanHandshake()
+    [Fact]
+    public async Task EngineCanHandshake()
+    {
+        var handler = new SpoaFrameworkConnectionHandler(NullLogger<SpoaFrameworkConnectionHandler>.Instance, new TestSpoaApplication());
+
+        using (var engine = new TestEngine())
         {
-            var handler = new SpoaFrameworkConnectionHandler(NullLogger<SpoaFrameworkConnectionHandler>.Instance, new TestSpoaApplication());
+            var connectionHandlerTask = handler.OnConnectedAsync(engine.Connection);
 
-            using (var engine = new TestEngine())
-            {
-                var connectionHandlerTask = handler.OnConnectedAsync(engine.Connection);
+            await engine.SendHello();
+            var (frame, _) = await engine.ReadOneFrameAsync();
 
-                await engine.SendHello();
-                var (frame, _) = await engine.ReadOneFrameAsync();
+            Assert.Equal(FrameType.AgentHello, frame.Type);
 
-                Assert.Equal(FrameType.AgentHello, frame.Type);
+            // kill the connection
+            engine.Dispose();
 
-                // kill the connection
-                engine.Dispose();
-
-                await connectionHandlerTask;
-            }
+            await connectionHandlerTask;
         }
+    }
 
-        [Fact]
-        public async Task EngineCanDisconnect()
+    [Fact]
+    public async Task EngineCanDisconnect()
+    {
+        var handler = new SpoaFrameworkConnectionHandler(NullLogger<SpoaFrameworkConnectionHandler>.Instance, new TestSpoaApplication());
+
+        using (var engine = new TestEngine())
         {
-            var handler = new SpoaFrameworkConnectionHandler(NullLogger<SpoaFrameworkConnectionHandler>.Instance, new TestSpoaApplication());
+            var connectionHandlerTask = handler.OnConnectedAsync(engine.Connection);
 
-            using (var engine = new TestEngine())
-            {
-                var connectionHandlerTask = handler.OnConnectedAsync(engine.Connection);
+            await engine.SendHello();
+            await engine.ReadOneFrameAsync();
 
-                await engine.SendHello();
-                await engine.ReadOneFrameAsync();
+            await engine.SendDisconnect();
+            var (frame, _) = await engine.ReadOneFrameAsync();
 
-                await engine.SendDisconnect();
-                var (frame, _) = await engine.ReadOneFrameAsync();
+            Assert.Equal(FrameType.AgentDisconnect, frame.Type);
 
-                Assert.Equal(FrameType.AgentDisconnect, frame.Type);
+            await connectionHandlerTask;
 
-                await connectionHandlerTask;
-
-                Assert.False(engine.Connection.Application.Input.TryRead(out var _));
-            }
+            Assert.False(engine.Connection.Application.Input.TryRead(out var _));
         }
+    }
 
-        [Fact]
-        public async Task AgentCanDisconnect()
+    [Fact]
+    public async Task AgentCanDisconnect()
+    {
+        var handler = new SpoaFrameworkConnectionHandler(NullLogger<SpoaFrameworkConnectionHandler>.Instance, new TestSpoaApplication());
+
+        using (var engine = new TestEngine())
         {
-            var handler = new SpoaFrameworkConnectionHandler(NullLogger<SpoaFrameworkConnectionHandler>.Instance, new TestSpoaApplication());
+            var connectionHandlerTask = handler.OnConnectedAsync(engine.Connection);
 
-            using (var engine = new TestEngine())
-            {
-                var connectionHandlerTask = handler.OnConnectedAsync(engine.Connection);
+            await engine.SendHello();
+            await engine.ReadOneFrameAsync();
 
-                await engine.SendHello();
-                await engine.ReadOneFrameAsync();
+            engine.RequestClose();
+            var (frame, _) = await engine.ReadOneFrameAsync();
 
-                engine.RequestClose();
-                var (frame, _) = await engine.ReadOneFrameAsync();
+            Assert.Equal(FrameType.AgentDisconnect, frame.Type);
 
-                Assert.Equal(FrameType.AgentDisconnect, frame.Type);
+            await connectionHandlerTask;
 
-                await connectionHandlerTask;
-
-                Assert.False(engine.Connection.Application.Input.TryRead(out var _));
-            }
+            Assert.False(engine.Connection.Application.Input.TryRead(out var _));
         }
+    }
 
-        [Fact]
-        public async Task WhenPipeFaultingAgentShouldDisconnect()
+    [Fact]
+    public async Task WhenPipeFaultingAgentShouldDisconnect()
+    {
+        var handler = new SpoaFrameworkConnectionHandler(NullLogger<SpoaFrameworkConnectionHandler>.Instance, new TestSpoaApplication());
+
+        using (var engine = new TestEngine())
         {
-            var handler = new SpoaFrameworkConnectionHandler(NullLogger<SpoaFrameworkConnectionHandler>.Instance, new TestSpoaApplication());
+            var connectionHandlerTask = handler.OnConnectedAsync(engine.Connection);
 
-            using (var engine = new TestEngine())
-            {
-                var connectionHandlerTask = handler.OnConnectedAsync(engine.Connection);
+            await engine.Connection.Application.Output.CompleteAsync(new IOException("test"));
 
-                await engine.Connection.Application.Output.CompleteAsync(new IOException("test"));
+            var status = new Dictionary<string, object>();
+            var (frame, payload) = await engine.ReadOneFrameAsync();
 
-                var status = new Dictionary<string, object>();
-                var (frame, payload) = await engine.ReadOneFrameAsync();
+            FrameReader.DecodeKeyValueListPayload(new ReadOnlySequence<byte>(payload), status);
 
-                FrameReader.DecodeKeyValueListPayload(new ReadOnlySequence<byte>(payload), status);
+            Assert.Equal(FrameType.AgentDisconnect, frame.Type);
+            Assert.Equal(1, status["status-code"]);
+            Assert.Equal("test", status["message"]);
 
-                Assert.Equal(FrameType.AgentDisconnect, frame.Type);
-                Assert.Equal(1, status["status-code"]);
-                Assert.Equal("test", status["message"]);
-
-                await connectionHandlerTask;
-            }
+            await connectionHandlerTask;
         }
+    }
 
-        [Fact]
-        public async Task WhenUnsupportedVersionAgentShouldDisconnect()
+    [Fact]
+    public async Task WhenUnsupportedVersionAgentShouldDisconnect()
+    {
+        var handler = new SpoaFrameworkConnectionHandler(NullLogger<SpoaFrameworkConnectionHandler>.Instance, new TestSpoaApplication());
+
+        using (var engine = new TestEngine()
         {
-            var handler = new SpoaFrameworkConnectionHandler(NullLogger<SpoaFrameworkConnectionHandler>.Instance, new TestSpoaApplication());
-
-            using (var engine = new TestEngine()
-            {
-                PeerSettings =
+            PeerSettings =
                 {
                     SupportedSpopVersion = "1.0"
                 }
-            })
-            {
-                var connectionHandlerTask = handler.OnConnectedAsync(engine.Connection);
-
-                await engine.Connection.Application.Output.CompleteAsync(new Exception("test"));
-
-                var (frame, _) = await engine.ReadOneFrameAsync();
-                Assert.Equal(FrameType.AgentDisconnect, frame.Type);
-
-                await connectionHandlerTask;
-            }
-        }
-
-        static SpopMessage _message = new SpopMessage("test")
+        })
         {
-            Args =
+            var connectionHandlerTask = handler.OnConnectedAsync(engine.Connection);
+
+            await engine.Connection.Application.Output.CompleteAsync(new Exception("test"));
+
+            var (frame, _) = await engine.ReadOneFrameAsync();
+            Assert.Equal(FrameType.AgentDisconnect, frame.Type);
+
+            await connectionHandlerTask;
+        }
+    }
+
+    private static readonly SpopMessage Message = new("test")
+    {
+        Args =
                     {
                         { "null", null },
                         { "bool", true },
-                        { "int", (int)2290 },
+                        { "int", 2290 },
                         { "long", (long)2290 },
                         { "uint", (uint)2290 },
                         { "ulong", (ulong)2290 },
@@ -160,8 +159,8 @@ namespace HAProxy.StreamProcessingOffload.AgentFramework.Tests
                         { "string", "string" },
                         { "binary", new byte[] { 0x1, 0x2 } }
                     }
-        };
-        static IEnumerable<SpopAction> _listOfActions = new List<SpopAction>
+    };
+    private static readonly IEnumerable<SpopAction> ListOfActions = new List<SpopAction>
         {
             new SetVarAction(VarScope.Process, "null", null),
             new SetVarAction(VarScope.Process, "bool", true),
@@ -174,154 +173,149 @@ namespace HAProxy.StreamProcessingOffload.AgentFramework.Tests
             new SetVarAction(VarScope.Process, "string", "string"),
             new SetVarAction(VarScope.Process, "binary", new byte[] { 0x1, 0x2 })
         };
-
-        TestSpoaApplication _spoaApplication = new TestSpoaApplication()
+    private readonly TestSpoaApplication spoaApplication = new()
+    {
+        AppDelegate = (streamId, messages) =>
         {
-            appDelegate = (streamId, messages) =>
-            {
-                Assert.Equal(42, streamId);
-                Assert.NotNull(messages);
-                Assert.NotEmpty(messages);
-                //Assert.Same(_message, messages.Single());
+            Assert.Equal(42, streamId);
+            Assert.NotNull(messages);
+            Assert.NotEmpty(messages);
+            //Assert.Same(_message, messages.Single());
 
-                return Task.FromResult(_listOfActions);
-            }
-        };
-
-
-        [Fact]
-        public async Task WhenEngineSendsNotifyAgentShouldRunSpoaApplicationAndWriteAgentAck()
-        {
-            var handler = new SpoaFrameworkConnectionHandler(NullLogger<SpoaFrameworkConnectionHandler>.Instance, _spoaApplication);
-
-            using (var engine = new TestEngine())
-            {
-                var connectionHandlerTask = handler.OnConnectedAsync(engine.Connection);
-
-                await engine.SendHello();
-                await engine.SendNotify(42, 1, new List<SpopMessage> { _message });
-
-                await engine.ReadOneFrameAsync();
-
-                var (frame, payload) = await engine.ReadOneFrameAsync();
-                FrameReader.DecodeListOfActionsPayload(new ReadOnlySequence<byte>(payload), out var actions);
-
-                Assert.Equal(FrameType.AgentAck, frame.Type);
-                Assert.Equal(FrameFlags.Fin, frame.Flags);
-                Assert.Equal(42, frame.StreamId);
-                Assert.Equal(1, frame.FrameId);
-
-                Assert.NotEmpty(actions);
-
-                // kill the connection
-                engine.Dispose();
-
-                await connectionHandlerTask;
-            }
+            return Task.FromResult(ListOfActions);
         }
+    };
 
-        [Fact]
-        public async Task WhenEngineSendsLastUnsetFrameAgentShouldRunSpoaApplicationAndWriteAgentAck()
+
+    [Fact]
+    public async Task WhenEngineSendsNotifyAgentShouldRunSpoaApplicationAndWriteAgentAck()
+    {
+        var handler = new SpoaFrameworkConnectionHandler(NullLogger<SpoaFrameworkConnectionHandler>.Instance, this.spoaApplication);
+
+        using (var engine = new TestEngine())
         {
-            var handler = new SpoaFrameworkConnectionHandler(NullLogger<SpoaFrameworkConnectionHandler>.Instance, _spoaApplication);
+            var connectionHandlerTask = handler.OnConnectedAsync(engine.Connection);
 
-            using (var engine = new TestEngine()
-            {
-                PeerSettings =
+            await engine.SendHello();
+            await engine.SendNotify(42, 1, new List<SpopMessage> { Message });
+
+            await engine.ReadOneFrameAsync();
+
+            var (frame, payload) = await engine.ReadOneFrameAsync();
+            FrameReader.DecodeListOfActionsPayload(new ReadOnlySequence<byte>(payload), out var actions);
+
+            Assert.Equal(FrameType.AgentAck, frame.Type);
+            Assert.Equal(Frame.Fin, frame.Flags);
+            Assert.Equal(42, frame.StreamId);
+            Assert.Equal(1, frame.FrameId);
+
+            Assert.NotEmpty(actions);
+
+            // kill the connection
+            engine.Dispose();
+
+            await connectionHandlerTask;
+        }
+    }
+
+    [Fact]
+    public async Task WhenEngineSendsLastUnsetFrameAgentShouldRunSpoaApplicationAndWriteAgentAck()
+    {
+        var handler = new SpoaFrameworkConnectionHandler(NullLogger<SpoaFrameworkConnectionHandler>.Instance, this.spoaApplication);
+
+        using (var engine = new TestEngine()
+        {
+            PeerSettings =
                 {
                     FrameSize = 100, // test payload is 112 byte long
                     FragmentationCapabilities = {
                         CanWrite = true
                     }
                 }
-            })
-            {
-                var connectionHandlerTask = handler.OnConnectedAsync(engine.Connection);
-
-                await engine.SendHello();
-                await engine.SendNotify(42, 1, new List<SpopMessage> { _message });
-
-                await engine.ReadOneFrameAsync();
-
-                var (frame, payload) = await engine.ReadOneFrameAsync();
-                FrameReader.DecodeListOfActionsPayload(new ReadOnlySequence<byte>(payload), out var actions);
-
-                Assert.Equal(FrameType.AgentAck, frame.Type);
-                Assert.Equal(FrameFlags.Fin, frame.Flags);
-                Assert.Equal(42, frame.StreamId);
-                Assert.Equal(1, frame.FrameId);
-                Assert.NotEmpty(actions);
-
-                // kill the connection
-                engine.Dispose();
-
-                await connectionHandlerTask;
-            }
-        }
-
-        [Fact]
-        public async Task WhenEngineSupportsFragmentationAgentShouldFragmentAgentAck()
+        })
         {
-            var handler = new SpoaFrameworkConnectionHandler(NullLogger<SpoaFrameworkConnectionHandler>.Instance, _spoaApplication);
+            var connectionHandlerTask = handler.OnConnectedAsync(engine.Connection);
 
-            using (var engine = new TestEngine()
-            {
-                PeerSettings =
+            await engine.SendHello();
+            await engine.SendNotify(42, 1, new List<SpopMessage> { Message });
+
+            await engine.ReadOneFrameAsync();
+
+            var (frame, payload) = await engine.ReadOneFrameAsync();
+            FrameReader.DecodeListOfActionsPayload(new ReadOnlySequence<byte>(payload), out var actions);
+
+            Assert.Equal(FrameType.AgentAck, frame.Type);
+            Assert.Equal(Frame.Fin, frame.Flags);
+            Assert.Equal(42, frame.StreamId);
+            Assert.Equal(1, frame.FrameId);
+            Assert.NotEmpty(actions);
+
+            // kill the connection
+            engine.Dispose();
+
+            await connectionHandlerTask;
+        }
+    }
+
+    [Fact]
+    public async Task WhenEngineSupportsFragmentationAgentShouldFragmentAgentAck()
+    {
+        var handler = new SpoaFrameworkConnectionHandler(NullLogger<SpoaFrameworkConnectionHandler>.Instance, this.spoaApplication);
+
+        using (var engine = new TestEngine()
+        {
+            PeerSettings =
                 {
                     FrameSize = 100, // test payload is 112 byte long
                     FragmentationCapabilities = {
                         CanRead = true
                     }
                 }
-            })
-            {
-                var connectionHandlerTask = handler.OnConnectedAsync(engine.Connection);
-
-                await engine.SendHello();
-                await engine.SendNotify(42, 1, new List<SpopMessage> { _message });
-
-                await engine.ReadOneFrameAsync();
-
-                var (frame, fragment1) = await engine.ReadOneFrameAsync();
-                var (frameFin, fragment2) = await engine.ReadOneFrameAsync();
-
-                FrameReader.DecodeListOfActionsPayload(new ReadOnlySequence<byte>(Combine(fragment1, fragment2)), out var actions);
-
-                Assert.Equal(FrameType.AgentAck, frame.Type);
-                Assert.Equal(FrameFlags.None, frame.Flags);
-                Assert.Equal(42, frame.StreamId);
-                Assert.Equal(1, frame.FrameId);
-                Assert.Equal(FrameType.Unset, frameFin.Type);
-                Assert.Equal(FrameFlags.Fin, frameFin.Flags);
-                Assert.Equal(42, frameFin.StreamId);
-                Assert.Equal(1, frameFin.FrameId);
-                Assert.NotEmpty(actions);
-
-                // kill the connection
-                engine.Dispose();
-
-                await connectionHandlerTask;
-            }
-        }
-
-        private static byte[] Combine(byte[] fragment1, byte[] fragment2)
+        })
         {
-            var payload = new byte[fragment1.Length + fragment2.Length];
-            fragment1.CopyTo(payload, 0);
-            fragment2.CopyTo(payload, (int)fragment1.Length);
+            var connectionHandlerTask = handler.OnConnectedAsync(engine.Connection);
 
-            return payload;
+            await engine.SendHello();
+            await engine.SendNotify(42, 1, new List<SpopMessage> { Message });
+
+            await engine.ReadOneFrameAsync();
+
+            var (frame, fragment1) = await engine.ReadOneFrameAsync();
+            var (frameFin, fragment2) = await engine.ReadOneFrameAsync();
+
+            FrameReader.DecodeListOfActionsPayload(new ReadOnlySequence<byte>(Combine(fragment1, fragment2)), out var actions);
+
+            Assert.Equal(FrameType.AgentAck, frame.Type);
+            Assert.Equal(Frame.None, frame.Flags);
+            Assert.Equal(42, frame.StreamId);
+            Assert.Equal(1, frame.FrameId);
+            Assert.Equal(FrameType.Unset, frameFin.Type);
+            Assert.Equal(Frame.Fin, frameFin.Flags);
+            Assert.Equal(42, frameFin.StreamId);
+            Assert.Equal(1, frameFin.FrameId);
+            Assert.NotEmpty(actions);
+
+            // kill the connection
+            engine.Dispose();
+
+            await connectionHandlerTask;
         }
+    }
 
-        public class TestSpoaApplication : ISpoaApplication
-        {
-            public Func<long, IEnumerable<SpopMessage>, Task<IEnumerable<SpopAction>>> appDelegate { get; set; } = (streamId, messages)
-                => Task.FromResult(Enumerable.Empty<SpopAction>());
+    private static byte[] Combine(byte[] fragment1, byte[] fragment2)
+    {
+        var payload = new byte[fragment1.Length + fragment2.Length];
+        fragment1.CopyTo(payload, 0);
+        fragment2.CopyTo(payload, fragment1.Length);
 
-            public Task<IEnumerable<SpopAction>> ProcessMessagesAsync(long streamId, IEnumerable<SpopMessage> messages)
-            {
-                return appDelegate(streamId, messages);
-            }
-        }
+        return payload;
+    }
+
+    public class TestSpoaApplication : ISpoaApplication
+    {
+        public Func<long, IEnumerable<SpopMessage>, Task<IEnumerable<SpopAction>>> AppDelegate { get; set; } = (streamId, messages)
+            => Task.FromResult(Enumerable.Empty<SpopAction>());
+
+        public Task<IEnumerable<SpopAction>> ProcessMessagesAsync(long streamId, IEnumerable<SpopMessage> messages) => this.AppDelegate(streamId, messages);
     }
 }

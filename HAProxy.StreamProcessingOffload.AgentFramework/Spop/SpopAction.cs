@@ -1,6 +1,5 @@
-﻿namespace HAProxy.StreamProcessingOffload.AgentFramework.Spop
+namespace HAProxy.StreamProcessingOffload.AgentFramework.Spop;
+
+public abstract class SpopAction
 {
-    public abstract class SpopAction
-    {
-    }
 }

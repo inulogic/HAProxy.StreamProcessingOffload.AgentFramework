@@ -1,13 +1,12 @@
-﻿namespace HAProxy.StreamProcessingOffload.AgentFramework.Spop
+namespace HAProxy.StreamProcessingOffload.AgentFramework.Spop;
+
+public partial class SpopFrameMetadata
 {
-    partial class SpopFrameMetadata
+    public void PrepareAgentDisconnect()
     {
-        public void PrepareAgentDisconnect()
-        {
-            Type = FrameType.AgentDisconnect;
-            Flags = FrameFlags.Fin;
-            StreamId = 0;
-            FrameId = 0;
-        }
+        this.Type = FrameType.AgentDisconnect;
+        this.Flags = Frame.Fin;
+        this.StreamId = 0;
+        this.FrameId = 0;
     }
 }

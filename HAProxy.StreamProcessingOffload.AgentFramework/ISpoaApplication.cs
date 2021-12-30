@@ -1,11 +1,9 @@
-﻿using HAProxy.StreamProcessingOffload.AgentFramework.Spop;
+namespace HAProxy.StreamProcessingOffload.AgentFramework;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using HAProxy.StreamProcessingOffload.AgentFramework.Spop;
 
-namespace HAProxy.StreamProcessingOffload.AgentFramework
+public interface ISpoaApplication
 {
-    public interface ISpoaApplication
-    {
-        Task<IEnumerable<SpopAction>> ProcessMessagesAsync(long streamId, IEnumerable<SpopMessage> messages);
-    }
+    Task<IEnumerable<SpopAction>> ProcessMessagesAsync(long streamId, IEnumerable<SpopMessage> messages);
 }
