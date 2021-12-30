@@ -1,6 +1,6 @@
 # HAProxy Stream Processing Offload Agent Framework
 
-Provides a [Stream Processing Offload Protocol](https://github.com/haproxy/wiki/wiki/SPOE:-Stream-Processing-Offloading-Engine) framework for ASP.NET Core or [BedrockFramework](HAProxy.StreamProcessingOffload.AgentFramework).
+Provides a [Stream Processing Offload Protocol](https://github.com/haproxy/wiki/wiki/SPOE:-Stream-Processing-Offloading-Engine) framework for ASP.NET Core or [BedrockFramework](https://github.com/davidfowl/BedrockFramework).
 
 It is fully asynchronuous and make heavy use of [I/O Pipeline](https://docs.microsoft.com/en-us/dotnet/standard/io/pipelines) and [Buffer](https://docs.microsoft.com/en-us/dotnet/standard/io/buffers) to do high-performance I/O and protocol parsing.
 
