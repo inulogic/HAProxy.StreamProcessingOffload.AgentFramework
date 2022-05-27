@@ -42,7 +42,7 @@ public class TestEngine : IConnectionLifetimeNotificationFeature, IDisposable
 
     public void Dispose() => this.Connection.Application.Output.Complete();
 
-    public Task SendHello() => this.frameProducer.WriteEngineHelloAsync(this.PeerSettings).AsTask();
+    public Task SendHello(bool isHealthCheck = false) => this.frameProducer.WriteEngineHelloAsync(this.PeerSettings, isHealthCheck).AsTask();
 
     internal Task SendNotify(long streamId, long frameId, IEnumerable<SpopMessage> messages) => this.frameProducer.WriteEngineNotifyAsync(streamId, frameId, messages, this.PeerSettings).AsTask();
 

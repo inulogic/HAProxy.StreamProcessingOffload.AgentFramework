@@ -51,6 +51,38 @@ public class SpoaFrameworkConnectionHandlerTests
     }
 
     [Fact]
+    /* 
+        https://github.com/haproxy/haproxy/blob/d8c195a326ca4154a18c11ba0ef90f5e00579ed0/doc/SPOE.txt#L820-L829
+
+        HAPROXY                       AGENT SRV
+            |       HAPROXY-HELLO         |
+            |    (healthcheck: true)      |
+            | --------------------------> |
+            |                             |
+            |   AGENT-HELLO + close()     |
+            | <-------------------------- |
+            |                             |
+    */
+    public async Task EngineCanHealthcheck()
+    {
+        var handler = new SpoaFrameworkConnectionHandler(NullLogger<SpoaFrameworkConnectionHandler>.Instance, new TestSpoaApplication());
+
+        using (var engine = new TestEngine())
+        {
+            var connectionHandlerTask = handler.OnConnectedAsync(engine.Connection);
+
+            await engine.SendHello(isHealthCheck: true);
+            var (frame, _) = await engine.ReadOneFrameAsync();
+
+            Assert.Equal(FrameType.AgentHello, frame.Type);
+
+            await connectionHandlerTask;
+
+            Assert.False(engine.Connection.Application.Input.TryRead(out var _));
+        }
+    }
+
+    [Fact]
     public async Task EngineCanDisconnect()
     {
         var handler = new SpoaFrameworkConnectionHandler(NullLogger<SpoaFrameworkConnectionHandler>.Instance, new TestSpoaApplication());
@@ -68,8 +100,6 @@ public class SpoaFrameworkConnectionHandlerTests
             Assert.Equal(FrameType.AgentDisconnect, frame.Type);
 
             await connectionHandlerTask;
-
-            Assert.False(engine.Connection.Application.Input.TryRead(out var _));
         }
     }
 

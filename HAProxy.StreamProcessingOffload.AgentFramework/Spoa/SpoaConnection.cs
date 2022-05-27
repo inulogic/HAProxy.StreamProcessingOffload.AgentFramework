@@ -192,9 +192,10 @@ public class SpoaConnection : ISpopFrameStreamLifetimeHandler
 
         if (engineSettings.TryGetValue(Constants.Handshake.ItemKeyNames.Healthcheck, out var healthcheck) && (bool)healthcheck)
         {
-            this.logger.LogDebug("healthcheck");
+            this.logger.LogDebug("HAPROXY-HELLO with healthcheck, closing connection after AGENT-HELLO");
             this.StopProcessingNextRequest(false);
-            return Task.CompletedTask;
+            // do not send agent disconnect frame
+            this.TryClose();
         }
 
         var engineSupportedVersionsItemValue = (string)engineSettings[Constants.Handshake.ItemKeyNames.SupportedVersions];
