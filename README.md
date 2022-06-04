@@ -5,15 +5,18 @@ Provides a [Stream Processing Offload Protocol](https://github.com/haproxy/wiki/
 It is fully asynchronuous and make heavy use of [I/O Pipeline](https://docs.microsoft.com/en-us/dotnet/standard/io/pipelines) and [Buffer](https://docs.microsoft.com/en-us/dotnet/standard/io/buffers) to do high-performance I/O and protocol parsing.
 
 Supports :
-- spop version 2.0
-- fragmentation in both ways. Meaning it can read fragmented frame from HAProxy and is ready to write them when HAProxy will support it
-- pipelining
+- SPOP version 2.0 [specification](https://github.com/haproxy/haproxy/blob/master/doc/SPOE.txt)
+- All SPOP data types
+- Capabilities :
+  - Fragmentation in both ways. Meaning it can read fragmented frame from HAProxy and is ready to write them when HAProxy will support it
+  - Pipelining
+- SPOP Healthcheck
 
-While it works fine, some part still need improvement. Contributions are welcome to improve :
+While it works fine and is production ready, some parts still need improvement. Contributions are welcome to improve :
 - end-user experience and configuration
 - add spop frame async capability (use an arbitrary connection to send agent ack frames)
 
-## Run example
+## Run examples
 
 ```sh
 cd example
@@ -32,7 +35,11 @@ User-Agent: curl/7.68.0
 Accept: */*
 ```
 
-You may want to test bedrock flavor with `docker compose -f docker-compose.yml -f docker-compose.bedrock.yml up -d` or compare performance with the c sample with `docker compose -f docker-compose.yml -f docker-compose.spoa-example.yml up -d`.
+You can find agent source code in [`example/agent`](example/agent).
+
+You may want to test [bedrock flavor](example/agent_bedrock) with `docker compose -f docker-compose.yml -f docker-compose.bedrock.yml up`.
+
+Additionally, `example` folder contains a [Dockerfile](example/agent_haproxy_spoa_example_c/Dockerfile) to build and run the [HAProxy C example](https://github.com/haproxy/spoa-example). You can run it with `docker compose -f docker-compose.yml -f docker-compose.spoa-example.yml up` and compare performance.
 
 ## Usage
 
@@ -101,4 +108,4 @@ You may want to test bedrock flavor with `docker compose -f docker-compose.yml -
 
     Use your own Startup class if the Host is also serving Web content.
 
-3. See examples/haproxy to configure haproxy
+3. See [example/haproxy](example/haproxy) to see how to configure haproxy. You will find extended information in the section 2 of the [specification](https://github.com/haproxy/haproxy/blob/master/doc/SPOE.txt).
