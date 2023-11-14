@@ -15,34 +15,28 @@ using Microsoft.Extensions.Logging;
 /// Will not produce fragmented frame as HAProxy still do not support it
 /// Support pipelining but not async (reuse the same TCP connection used for the corresponding NOTIFY frame)
 /// </summary>
-public class SpopFrameProducer
+public class SpopFrameProducer(ILogger logger, SpopFrameWriter frameWriter)
 {
-    private static readonly byte[] StatusCodeByteArray = Encoding.ASCII.GetBytes(Constants.Disconnect.ItemKeyNames.StatusCode);
-    private static readonly byte[] MessageByteArray = Encoding.ASCII.GetBytes(Constants.Disconnect.ItemKeyNames.Message);
-    private static readonly byte[] VersionByteArray = Encoding.ASCII.GetBytes(Constants.Handshake.ItemKeyNames.Version);
-    private static readonly byte[] SupportedVersionsByteArray = Encoding.ASCII.GetBytes(Constants.Handshake.ItemKeyNames.SupportedVersions);
-    private static readonly byte[] MaxFrameSizeByteArray = Encoding.ASCII.GetBytes(Constants.Handshake.ItemKeyNames.MaxFrameSize);
-    private static readonly byte[] CapabilitiesByteArray = Encoding.ASCII.GetBytes(Constants.Handshake.ItemKeyNames.FrameCapabilities);
-    private static readonly byte[] HealthcheckByteArray = Encoding.ASCII.GetBytes(Constants.Handshake.ItemKeyNames.Healthcheck);
+    internal static readonly byte[] StatusCodeByteArray = Encoding.ASCII.GetBytes(Constants.Disconnect.ItemKeyNames.StatusCode);
+    internal static readonly byte[] MessageByteArray = Encoding.ASCII.GetBytes(Constants.Disconnect.ItemKeyNames.Message);
+    internal static readonly byte[] VersionByteArray = Encoding.ASCII.GetBytes(Constants.Handshake.ItemKeyNames.Version);
+    internal static readonly byte[] SupportedVersionsByteArray = Encoding.ASCII.GetBytes(Constants.Handshake.ItemKeyNames.SupportedVersions);
+    internal static readonly byte[] MaxFrameSizeByteArray = Encoding.ASCII.GetBytes(Constants.Handshake.ItemKeyNames.MaxFrameSize);
+    internal static readonly byte[] CapabilitiesByteArray = Encoding.ASCII.GetBytes(Constants.Handshake.ItemKeyNames.FrameCapabilities);
+    internal static readonly byte[] HealthcheckByteArray = Encoding.ASCII.GetBytes(Constants.Handshake.ItemKeyNames.Healthcheck);
 
-    private static ReadOnlySpan<byte> StatusCodeBytes => StatusCodeByteArray;
-    private static ReadOnlySpan<byte> MessageBytes => MessageByteArray;
-    private static ReadOnlySpan<byte> VersionBytes => VersionByteArray;
-    private static ReadOnlySpan<byte> SupportedVersionsBytes => SupportedVersionsByteArray;
-    private static ReadOnlySpan<byte> MaxFrameSizeBytes => MaxFrameSizeByteArray;
-    private static ReadOnlySpan<byte> CapabilitiesBytes => CapabilitiesByteArray;
-    private static ReadOnlySpan<byte> HealthcheckBytes => HealthcheckByteArray;
+    internal static ReadOnlySpan<byte> StatusCodeBytes => StatusCodeByteArray;
+    internal static ReadOnlySpan<byte> MessageBytes => MessageByteArray;
+    internal static ReadOnlySpan<byte> VersionBytes => VersionByteArray;
+    internal static ReadOnlySpan<byte> SupportedVersionsBytes => SupportedVersionsByteArray;
+    internal static ReadOnlySpan<byte> MaxFrameSizeBytes => MaxFrameSizeByteArray;
+    internal static ReadOnlySpan<byte> CapabilitiesBytes => CapabilitiesByteArray;
+    internal static ReadOnlySpan<byte> HealthcheckBytes => HealthcheckByteArray;
 
-    private readonly ILogger logger;
-    private readonly SpopFrameWriter frameWriter;
-    private readonly object writeLock = new();
-    private readonly SpopFrameMetadata outgoingFrame = new();
-
-    public SpopFrameProducer(ILogger logger, SpopFrameWriter frameWriter)
-    {
-        this.logger = logger;
-        this.frameWriter = frameWriter;
-    }
+    internal readonly ILogger logger = logger;
+    internal readonly SpopFrameWriter frameWriter = frameWriter;
+    internal readonly object writeLock = new();
+    internal readonly SpopFrameMetadata outgoingFrame = new();
 
     public ValueTask<FlushResult> WriteAgentDisconnectAsync(int statusCode = 0, string message = "")
     {
@@ -129,7 +123,7 @@ public class SpopFrameProducer
         }
     }
 
-    private static string GetCapabilities(SpopPeerSettings peerSettings)
+    internal static string GetCapabilities(SpopPeerSettings peerSettings)
     {
         var capabilities = new List<string>(2);
         if (peerSettings.FragmentationCapabilities.CanRead)
@@ -185,10 +179,10 @@ public class SpopFrameProducer
         }
     }
 
-    private const int FrameTypeAndFlagsLength = 5;
-    private const int FrameLengthLength = 4;
-    private const int FrameIdsMaxLength = 5 * 2;
-    private const int FrameMetadataMaxLength = FrameLengthLength + FrameTypeAndFlagsLength + FrameIdsMaxLength;
+    internal const int FrameTypeAndFlagsLength = 5;
+    internal const int FrameLengthLength = 4;
+    internal const int FrameIdsMaxLength = 5 * 2;
+    internal const int FrameMetadataMaxLength = FrameLengthLength + FrameTypeAndFlagsLength + FrameIdsMaxLength;
 
 
     // <FRAME-LENGTH:4 bytes> <FRAME-TYPE:1 byte> <FLAGS:4 bytes> <STREAM-ID:varint> <FRAME-ID:varint> <FRAME-PAYLOAD:*>
@@ -236,7 +230,7 @@ public class SpopFrameProducer
         return this.WriteFrameInternal(framePayload);
     }
 
-    private async ValueTask<FlushResult> WriteFrameFragmentedPayload(ReadOnlyMemory<byte> framePayload, int maxFrameSize)
+    internal async ValueTask<FlushResult> WriteFrameFragmentedPayload(ReadOnlyMemory<byte> framePayload, int maxFrameSize)
     {
         var current = framePayload;
         FlushResult result = default;
@@ -266,7 +260,7 @@ public class SpopFrameProducer
 
     // LIST-OF-MESSAGES : [ <MESSAGE-NAME> <NB-ARGS:1 byte> <KV-LIST> ... ]
     // MESSAGE-NAME     : <STRING>
-    private static void WriteListOfMessages(ArrayBufferWriter<byte> buffer, ref int bytePending, IEnumerable<SpopMessage> value)
+    internal static void WriteListOfMessages(ArrayBufferWriter<byte> buffer, ref int bytePending, IEnumerable<SpopMessage> value)
     {
         foreach (var message in value)
         {
@@ -290,7 +284,7 @@ public class SpopFrameProducer
 
     // LIST-OF-ACTIONS  : [ <ACTION-TYPE:1 byte> <NB-ARGS:1 byte> <ACTION-ARGS> ... ]
     // ACTION-ARGS      : [ <TYPED-DATA>... ] see each action type
-    private static void WriteListOfActions(ArrayBufferWriter<byte> buffer, ref int bytePending, IEnumerable<SpopAction> actions)
+    internal static void WriteListOfActions(ArrayBufferWriter<byte> buffer, ref int bytePending, IEnumerable<SpopAction> actions)
     {
         foreach (var action in actions)
         {
@@ -309,7 +303,7 @@ public class SpopFrameProducer
     }
 
     // ACTION-SET-VAR  : <SET-VAR=1:1 byte><NB-ARGS=3:1 byte><VAR-SCOPE:1 byte><VAR-NAME><VAR-VALUE>
-    private static void WriteSetVariableAction(ArrayBufferWriter<byte> buffer, ref int bytePending, SetVarAction value)
+    internal static void WriteSetVariableAction(ArrayBufferWriter<byte> buffer, ref int bytePending, SetVarAction value)
     {
         WriteByte(buffer, ref bytePending, 1);
         WriteByte(buffer, ref bytePending, 3);
@@ -319,7 +313,7 @@ public class SpopFrameProducer
     }
 
     // ACTION-UNSET-VAR  : <UNSET-VAR=2:1 byte><NB-ARGS=2:1 byte><VAR-SCOPE:1 byte><VAR-NAME>
-    private static void WriteUnsetVariableAction(ArrayBufferWriter<byte> buffer, ref int bytePending, UnsetVarAction value)
+    internal static void WriteUnsetVariableAction(ArrayBufferWriter<byte> buffer, ref int bytePending, UnsetVarAction value)
     {
         WriteByte(buffer, ref bytePending, 2);
         WriteByte(buffer, ref bytePending, 2);
@@ -381,7 +375,7 @@ public class SpopFrameProducer
     /// <param name="buffer"></param>
     /// <param name="bytePending"></param>
     /// <param name="value"></param>
-    private static void WriteString(ArrayBufferWriter<byte> buffer, ref int bytePending, string value)
+    internal static void WriteString(ArrayBufferWriter<byte> buffer, ref int bytePending, string value)
     {
         if (value.Length > int.MaxValue - 5)
         {
@@ -397,7 +391,7 @@ public class SpopFrameProducer
         bytePending += requiredSize - span.Length;
     }
 
-    private static void WriteString(ArrayBufferWriter<byte> buffer, ref int bytePending, in ReadOnlySpan<byte> value)
+    internal static void WriteString(ArrayBufferWriter<byte> buffer, ref int bytePending, in ReadOnlySpan<byte> value)
     {
         if (value.Length > int.MaxValue - 5)
         {
@@ -414,7 +408,7 @@ public class SpopFrameProducer
         bytePending += requiredSize - span.Length;
     }
 
-    private static void WriteIpv4(ArrayBufferWriter<byte> buffer, ref int bytePending, IPAddress value)
+    internal static void WriteIpv4(ArrayBufferWriter<byte> buffer, ref int bytePending, IPAddress value)
     {
         var requiredSize = 4;
         var memory = buffer.GetSpan(checked(bytePending + requiredSize));
@@ -424,7 +418,7 @@ public class SpopFrameProducer
         bytePending += requiredSize;
     }
 
-    private static void WriteIpv6(ArrayBufferWriter<byte> buffer, ref int bytePending, IPAddress value)
+    internal static void WriteIpv6(ArrayBufferWriter<byte> buffer, ref int bytePending, IPAddress value)
     {
         var requiredSize = 16;
         var memory = buffer.GetSpan(checked(bytePending + requiredSize));
@@ -434,7 +428,7 @@ public class SpopFrameProducer
         bytePending += requiredSize;
     }
 
-    private static void WriteInt32(ArrayBufferWriter<byte> buffer, ref int bytePending, int value)
+    internal static void WriteInt32(ArrayBufferWriter<byte> buffer, ref int bytePending, int value)
     {
         var requiredSize = 5;
         var memory = buffer.GetSpan(checked(bytePending + requiredSize));
@@ -444,7 +438,7 @@ public class SpopFrameProducer
         bytePending += requiredSize - span.Length;
     }
 
-    private static void WriteUint32(ArrayBufferWriter<byte> buffer, ref int bytePending, uint value)
+    internal static void WriteUint32(ArrayBufferWriter<byte> buffer, ref int bytePending, uint value)
     {
         var requiredSize = 5;
         var memory = buffer.GetSpan(checked(bytePending + requiredSize));
@@ -454,7 +448,7 @@ public class SpopFrameProducer
         bytePending += requiredSize - span.Length;
     }
 
-    private static void WriteInt64(ArrayBufferWriter<byte> buffer, ref int bytePending, long value)
+    internal static void WriteInt64(ArrayBufferWriter<byte> buffer, ref int bytePending, long value)
     {
         var requiredSize = 10;
         var memory = buffer.GetSpan(checked(bytePending + requiredSize));
@@ -464,7 +458,7 @@ public class SpopFrameProducer
         bytePending += requiredSize - span.Length;
     }
 
-    private static void WriteUint64(ArrayBufferWriter<byte> buffer, ref int bytePending, ulong value)
+    internal static void WriteUint64(ArrayBufferWriter<byte> buffer, ref int bytePending, ulong value)
     {
         var requiredSize = 10;
         var memory = buffer.GetSpan(checked(bytePending + requiredSize));
@@ -474,7 +468,7 @@ public class SpopFrameProducer
         bytePending += requiredSize - span.Length;
     }
 
-    private static void WriteBinary(ArrayBufferWriter<byte> buffer, ref int bytePending, byte[] value)
+    internal static void WriteBinary(ArrayBufferWriter<byte> buffer, ref int bytePending, byte[] value)
     {
         var requiredSize = checked(5 + value.Length);
         var memory = buffer.GetSpan(checked(bytePending + requiredSize));
@@ -485,7 +479,7 @@ public class SpopFrameProducer
         bytePending += requiredSize - span.Length + value.Length;
     }
 
-    private static void WriteByte(ArrayBufferWriter<byte> buffer, ref int bytePending, byte value)
+    internal static void WriteByte(ArrayBufferWriter<byte> buffer, ref int bytePending, byte value)
     {
         var requiredSize = 1;
         var memory = buffer.GetSpan(checked(bytePending + requiredSize));
@@ -507,7 +501,7 @@ public class SpopFrameProducer
         buffer = buffer[sizeof(byte)..];
     }
 
-    private static void WriteInteger(ref Span<byte> buffer, int value)
+    internal static void WriteInteger(ref Span<byte> buffer, int value)
     {
         BinaryPrimitives.WriteInt32BigEndian(buffer, value);
         buffer = buffer[sizeof(int)..];

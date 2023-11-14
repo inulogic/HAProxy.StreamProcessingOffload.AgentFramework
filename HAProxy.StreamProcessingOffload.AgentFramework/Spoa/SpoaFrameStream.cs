@@ -8,34 +8,28 @@ using HAProxy.StreamProcessingOffload.AgentFramework.Spop;
 using Microsoft.Extensions.Logging;
 
 // class to process notify frame
-internal class SpoaFrameStream : IThreadPoolWorkItem
+internal sealed class SpoaFrameStream(ILogger logger, ISpoaApplication application) : IThreadPoolWorkItem
 {
-    private readonly ISpoaApplication application;
-    private readonly ILogger logger;
+    internal readonly ISpoaApplication application = application;
+    internal readonly ILogger logger = logger;
 
     // allow to buffer the payload
-    private Pipe PayloadPipe { get; set; }
+    internal Pipe PayloadPipe { get; set; }
 
-    private PipeReader Input => this.PayloadPipe.Reader;
+    internal PipeReader Input => this.PayloadPipe.Reader;
 
-    private MemoryPool<byte> memoryPool;
-    private SpopFrameWriter writer;
+    internal MemoryPool<byte> memoryPool;
+    internal SpopFrameWriter writer;
 
-    public long StreamId { get; private set; }
-    public long FrameId { get; private set; }
+    public long StreamId { get; internal set; }
+    public long FrameId { get; internal set; }
 
-    private ISpopFrameStreamLifetimeHandler streamLifetimeHandler;
+    internal ISpopFrameStreamLifetimeHandler streamLifetimeHandler;
 
-    private SpopFrameProducer output;
+    internal SpopFrameProducer output;
 
-    private SpopPeerSettings peerSettings;
-    private ExecutionContext initialExecutionContext;
-
-    public SpoaFrameStream(ILogger logger, ISpoaApplication application)
-    {
-        this.logger = logger;
-        this.application = application;
-    }
+    internal SpopPeerSettings peerSettings;
+    internal ExecutionContext initialExecutionContext;
 
     public void Initialize(
         SpopFrameWriter writer,
@@ -75,7 +69,7 @@ internal class SpoaFrameStream : IThreadPoolWorkItem
 
     public void Execute() => _ = this.ProcessPayloadAsync(this.application);
 
-    private async Task ProcessPayloadAsync(ISpoaApplication application)
+    internal async Task ProcessPayloadAsync(ISpoaApplication application)
     {
         // restore connection context (mainly for logging scope)
         ExecutionContext.Restore(this.initialExecutionContext);
@@ -155,7 +149,7 @@ internal class SpoaFrameStream : IThreadPoolWorkItem
         }
     }
 
-    private Pipe CreatePayloadPipe()
+    internal Pipe CreatePayloadPipe()
         => new(new PipeOptions
         (
             pool: this.memoryPool,

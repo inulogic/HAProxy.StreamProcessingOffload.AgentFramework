@@ -174,7 +174,7 @@ public class SpoaFrameworkConnectionHandlerTests
         }
     }
 
-    private static readonly SpopMessage Message = new("test")
+    internal static readonly SpopMessage Message = new("test")
     {
         Args =
                     {
@@ -190,7 +190,7 @@ public class SpoaFrameworkConnectionHandlerTests
                         { "binary", new byte[] { 0x1, 0x2 } }
                     }
     };
-    private static readonly IEnumerable<SpopAction> ListOfActions = new List<SpopAction>
+    internal static readonly IEnumerable<SpopAction> ListOfActions = new List<SpopAction>
         {
             new SetVarAction(VarScope.Process, "null", null),
             new SetVarAction(VarScope.Process, "bool", true),
@@ -203,7 +203,7 @@ public class SpoaFrameworkConnectionHandlerTests
             new SetVarAction(VarScope.Process, "string", "string"),
             new SetVarAction(VarScope.Process, "binary", new byte[] { 0x1, 0x2 })
         };
-    private readonly TestSpoaApplication spoaApplication = new()
+    internal readonly TestSpoaApplication spoaApplication = new()
     {
         AppDelegate = (streamId, messages) =>
         {
@@ -332,7 +332,7 @@ public class SpoaFrameworkConnectionHandlerTests
         }
     }
 
-    private static byte[] Combine(byte[] fragment1, byte[] fragment2)
+    internal static byte[] Combine(byte[] fragment1, byte[] fragment2)
     {
         var payload = new byte[fragment1.Length + fragment2.Length];
         fragment1.CopyTo(payload, 0);

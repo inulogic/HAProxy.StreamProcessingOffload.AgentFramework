@@ -1,19 +1,19 @@
 namespace HAProxy.StreamProcessingOffload.AgentFramework.Spop;
 
-internal class Constants
+internal sealed class Constants
 {
-    public class Disconnect
+    internal sealed class Disconnect
     {
-        public class ItemKeyNames
+        internal sealed class ItemKeyNames
         {
             public const string StatusCode = "status-code";
             public const string Message = "message";
         }
     }
 
-    public class Handshake
+    internal sealed class Handshake
     {
-        public class ItemKeyNames
+        internal sealed class ItemKeyNames
         {
             public const string SupportedVersions = "supported-versions";
             public const string Version = "version";
@@ -23,14 +23,14 @@ internal class Constants
             public const string EngineId = "engine-id";
         }
 
-        public class FrameCapabilities
+        internal sealed class FrameCapabilities
         {
             public const string Fragmentation = "fragmentation";
             public const string Pipelining = "pipelining";
         }
     }
 
-    public class StatusCode
+    internal sealed class StatusCode
     {
         /// <summary>
         /// normal (no error occurred)

@@ -1,15 +1,9 @@
 namespace HAProxy.StreamProcessingOffload.AgentFramework.Spop;
 using System.Collections.Generic;
 
-public class SpopMessage
+public class SpopMessage(string name)
 {
-    public SpopMessage(string name)
-    {
-        this.Name = name;
-        this.Args = new Dictionary<string, object>();
-    }
+    public string Name { get; internal set; } = name;
 
-    public string Name { get; private set; }
-
-    public IDictionary<string, object> Args { get; private set; }
+    public IDictionary<string, object> Args { get; internal set; } = new Dictionary<string, object>();
 }

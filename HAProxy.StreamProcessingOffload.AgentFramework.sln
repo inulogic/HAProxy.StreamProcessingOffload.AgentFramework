@@ -7,6 +7,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HAProxy.StreamProcessingOff
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HAProxy.StreamProcessingOffload.AgentFramework.Tests", "HAProxy.StreamProcessingOffload.AgentFramework.Tests\HAProxy.StreamProcessingOffload.AgentFramework.Tests.csproj", "{F26D23B2-FD3A-4618-9C34-AA42A6910928}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "example", "example", "{4909DDB2-4FD1-41F0-A0EA-96AA22A22CEA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Agent", "example\agent\Agent.csproj", "{B5CCACA6-5EAC-4AD3-9CD0-E32A28613CFF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -44,5 +48,20 @@ Global
 		{F26D23B2-FD3A-4618-9C34-AA42A6910928}.Release|x64.Build.0 = Release|Any CPU
 		{F26D23B2-FD3A-4618-9C34-AA42A6910928}.Release|x86.ActiveCfg = Release|Any CPU
 		{F26D23B2-FD3A-4618-9C34-AA42A6910928}.Release|x86.Build.0 = Release|Any CPU
+		{B5CCACA6-5EAC-4AD3-9CD0-E32A28613CFF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B5CCACA6-5EAC-4AD3-9CD0-E32A28613CFF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B5CCACA6-5EAC-4AD3-9CD0-E32A28613CFF}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{B5CCACA6-5EAC-4AD3-9CD0-E32A28613CFF}.Debug|x64.Build.0 = Debug|Any CPU
+		{B5CCACA6-5EAC-4AD3-9CD0-E32A28613CFF}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{B5CCACA6-5EAC-4AD3-9CD0-E32A28613CFF}.Debug|x86.Build.0 = Debug|Any CPU
+		{B5CCACA6-5EAC-4AD3-9CD0-E32A28613CFF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B5CCACA6-5EAC-4AD3-9CD0-E32A28613CFF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B5CCACA6-5EAC-4AD3-9CD0-E32A28613CFF}.Release|x64.ActiveCfg = Release|Any CPU
+		{B5CCACA6-5EAC-4AD3-9CD0-E32A28613CFF}.Release|x64.Build.0 = Release|Any CPU
+		{B5CCACA6-5EAC-4AD3-9CD0-E32A28613CFF}.Release|x86.ActiveCfg = Release|Any CPU
+		{B5CCACA6-5EAC-4AD3-9CD0-E32A28613CFF}.Release|x86.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{B5CCACA6-5EAC-4AD3-9CD0-E32A28613CFF} = {4909DDB2-4FD1-41F0-A0EA-96AA22A22CEA}
 	EndGlobalSection
 EndGlobal

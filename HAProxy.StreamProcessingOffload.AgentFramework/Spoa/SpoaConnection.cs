@@ -13,35 +13,35 @@ using Microsoft.Extensions.Logging;
 // based on https://github.com/dotnet/aspnetcore/blob/main/src/Servers/Kestrel/Core/src/Internal/Http2/Http2Connection.cs
 public class SpoaConnection : ISpopFrameStreamLifetimeHandler
 {
-    private readonly ILogger logger;
+    internal readonly ILogger logger;
 
     // context
-    private readonly IDuplexPipe transport;
-    private readonly MemoryPool<byte> memoryPool;
-    private readonly SpopFrameWriter frameWriter;
-    private readonly SpopFrameProducer output;
-    private readonly Pipe input;
-    private readonly Task inputTask;
-    private readonly ExecutionContext initialExecutionContext;
-    private readonly int minAllocBufferSize;
+    internal readonly IDuplexPipe transport;
+    internal readonly MemoryPool<byte> memoryPool;
+    internal readonly SpopFrameWriter frameWriter;
+    internal readonly SpopFrameProducer output;
+    internal readonly Pipe input;
+    internal readonly Task inputTask;
+    internal readonly ExecutionContext initialExecutionContext;
+    internal readonly int minAllocBufferSize;
 
-    private readonly SpopPeerSettings mySettings = SpopPeerSettings.AgentSettings;
-    private readonly SpopPeerSettings negotiatedSettings = new();
+    internal readonly SpopPeerSettings mySettings = SpopPeerSettings.AgentSettings;
+    internal readonly SpopPeerSettings negotiatedSettings = new();
 
-    private readonly SpopFrameMetadata incomingFrame = new();
+    internal readonly SpopFrameMetadata incomingFrame = new();
 
-    private readonly ConcurrentQueue<SpoaFrameStream> completedStreams = new();
-    private int gracefulCloseInitiator;
-    private bool gracefulCloseStarted;
-    private int isClosed;
+    internal readonly ConcurrentQueue<SpoaFrameStream> completedStreams = new();
+    internal int gracefulCloseInitiator;
+    internal bool gracefulCloseStarted;
+    internal int isClosed;
 
     // Each notify frames will spawn a stream to process the frame set.
     // Streams are thread pool work item to allow pipelining
     // The dictionary is accessed only from the main loop thread, no lock required
-    private readonly Dictionary<(long, long), SpoaFrameStream> _streams = new();
+    internal readonly Dictionary<(long, long), SpoaFrameStream> _streams = [];
 
-    private const int InitialStreamPoolSize = 5;
-    private const int MaxStreamPoolSize = 40; // max-waiting-frames in spoe conf must be less than this, default is 20
+    internal const int InitialStreamPoolSize = 5;
+    internal const int MaxStreamPoolSize = 40; // max-waiting-frames in spoe conf must be less than this, default is 20
 
     public SpoaConnection(ILogger logger, IDuplexPipe transport)
     {
@@ -155,13 +155,13 @@ public class SpoaConnection : ISpopFrameStreamLifetimeHandler
         }
     }
 
-    private static (int status, string message) GetErrorStatus(Exception ex) => ex switch
+    internal static (int status, string message) GetErrorStatus(Exception ex) => ex switch
     {
         IOException iOException => (Constants.StatusCode.IO, iOException.Message),
         _ => (Constants.StatusCode.UnknownError, ex.Message),
     };
 
-    private void UpdateCompletedStreams()
+    internal void UpdateCompletedStreams()
     {
         while (this.completedStreams.TryDequeue(out var stream))
         {
@@ -169,7 +169,7 @@ public class SpoaConnection : ISpopFrameStreamLifetimeHandler
         }
     }
 
-    private Task ProcessFrameAsync(ISpoaApplication application, in ReadOnlySequence<byte> payload) => this.incomingFrame.Type switch
+    internal Task ProcessFrameAsync(ISpoaApplication application, in ReadOnlySequence<byte> payload) => this.incomingFrame.Type switch
     {
         FrameType.HaproxyHello => this.ProcessHandshake(payload),
         FrameType.HaproxyNotify => this.ProcessNotifyFrameAsync(application, payload),
@@ -181,11 +181,11 @@ public class SpoaConnection : ISpopFrameStreamLifetimeHandler
         _ => ProcessUnknownFrameAsync(),
     };
 
-    private static Task ProcessUnknownFrameAsync() =>
+    internal static Task ProcessUnknownFrameAsync() =>
         // discard (or should we disconnect with 4 | invalid frame received)
         Task.CompletedTask;
 
-    private Task ProcessHandshake(in ReadOnlySequence<byte> payload)
+    internal Task ProcessHandshake(in ReadOnlySequence<byte> payload)
     {
         var engineSettings = new Dictionary<string, object>();
         FrameReader.DecodeKeyValueListPayload(payload, engineSettings);
@@ -233,7 +233,7 @@ public class SpoaConnection : ISpopFrameStreamLifetimeHandler
         return this.output.WriteAgentHelloAsync(this.negotiatedSettings).AsTask();
     }
 
-    private Task ProcessNotifyFrameAsync(ISpoaApplication application, in ReadOnlySequence<byte> payload)
+    internal Task ProcessNotifyFrameAsync(ISpoaApplication application, in ReadOnlySequence<byte> payload)
     {
         // get and start a thread worker to process the payload
         var spopStream = this.GetFrameStream(application);
@@ -242,7 +242,7 @@ public class SpoaConnection : ISpopFrameStreamLifetimeHandler
         return spopStream.OnDataAsync(payload, (this.incomingFrame.Flags & Frame.Fin) == Frame.Fin);
     }
 
-    private Task ProcessContinuationFrameAsync(in ReadOnlySequence<byte> payload)
+    internal Task ProcessContinuationFrameAsync(in ReadOnlySequence<byte> payload)
     {
         if (this._streams.TryGetValue((this.incomingFrame.StreamId, this.incomingFrame.FrameId), out var spopStream))
         {
@@ -260,7 +260,7 @@ public class SpoaConnection : ISpopFrameStreamLifetimeHandler
         return Task.CompletedTask;
     }
 
-    private Task ProcessDisconnectFrameAsync(in ReadOnlySequence<byte> payload)
+    internal Task ProcessDisconnectFrameAsync(in ReadOnlySequence<byte> payload)
     {
         var status = new Dictionary<string, object>();
 
@@ -275,7 +275,7 @@ public class SpoaConnection : ISpopFrameStreamLifetimeHandler
         return Task.CompletedTask;
     }
 
-    private void StopProcessingNextRequest(bool agentInitiated)
+    internal void StopProcessingNextRequest(bool agentInitiated)
     {
         var initiator = agentInitiated ? GracefulCloseInitiator.Server : GracefulCloseInitiator.Client;
 
@@ -285,7 +285,7 @@ public class SpoaConnection : ISpopFrameStreamLifetimeHandler
         }
     }
 
-    private SpoaFrameStream GetFrameStream(ISpoaApplication application)
+    internal SpoaFrameStream GetFrameStream(ISpoaApplication application)
     {
         // TODO: pool to reuse instance
         // TODO: stream should expire
@@ -295,15 +295,15 @@ public class SpoaConnection : ISpopFrameStreamLifetimeHandler
         return stream;
     }
 
-    private void RemoveStream(SpoaFrameStream stream) => this._streams.Remove((stream.StreamId, stream.FrameId));// stream.Dispose();
+    internal void RemoveStream(SpoaFrameStream stream) => this._streams.Remove((stream.StreamId, stream.FrameId));// stream.Dispose();
 
-    private void StartFrameStream(SpoaFrameStream spopStream)
+    internal void StartFrameStream(SpoaFrameStream spopStream)
     {
         this._streams[(this.incomingFrame.StreamId, this.incomingFrame.FrameId)] = spopStream;
         ThreadPool.UnsafeQueueUserWorkItem(spopStream, preferLocal: false);
     }
 
-    private async Task UpdateConnectionState()
+    internal async Task UpdateConnectionState()
     {
         if (this.isClosed != 0)
         {
@@ -324,7 +324,7 @@ public class SpoaConnection : ISpopFrameStreamLifetimeHandler
         }
     }
 
-    private bool TryClose()
+    internal bool TryClose()
     {
         if (Interlocked.Exchange(ref this.isClosed, 1) == 0)
         {
@@ -334,7 +334,7 @@ public class SpoaConnection : ISpopFrameStreamLifetimeHandler
         return false;
     }
 
-    private async Task ReadInputAsync()
+    internal async Task ReadInputAsync()
     {
         Exception error = null;
         try
@@ -385,7 +385,7 @@ public class SpoaConnection : ISpopFrameStreamLifetimeHandler
 
     void ISpopFrameStreamLifetimeHandler.OnStreamCompleted(SpoaFrameStream stream) => this.completedStreams.Enqueue(stream);
 
-    private static class GracefulCloseInitiator
+    internal static class GracefulCloseInitiator
     {
         public const int None = 0;
         public const int Server = 1;
