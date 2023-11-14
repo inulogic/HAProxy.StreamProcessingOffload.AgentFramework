@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/inulogic/HAProxy.StreamProcessingOffload.AgentFramework/compare/v1.0.2...v1.1.0) (2023-11-14)
+
+
+### Features
+
+* **deps:** update dotnet monorepo to v8 ([#65](https://github.com/inulogic/HAProxy.StreamProcessingOffload.AgentFramework/issues/65)) ([a15df10](https://github.com/inulogic/HAProxy.StreamProcessingOffload.AgentFramework/commit/a15df10307c42be33af641360bac557d00d9fae2))
+
 ## [1.0.2](https://github.com/inulogic/HAProxy.StreamProcessingOffload.AgentFramework/compare/v1.0.1...v1.0.2) (2023-07-01)
 
 
