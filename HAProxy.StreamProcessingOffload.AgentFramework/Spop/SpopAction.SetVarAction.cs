@@ -1,15 +1,8 @@
 namespace HAProxy.StreamProcessingOffload.AgentFramework.Spop;
 
-public class SetVarAction : SpopAction
+public class SetVarAction(VarScope scope, string name, object value) : SpopAction
 {
-    public SetVarAction(VarScope scope, string name, object value)
-    {
-        this.Scope = scope;
-        this.Name = name;
-        this.Value = value;
-    }
-
-    public VarScope Scope { get; private set; }
-    public string Name { get; private set; }
-    public object Value { get; private set; }
+    public VarScope Scope { get; internal set; } = scope;
+    public string Name { get; internal set; } = name;
+    public object Value { get; internal set; } = value;
 }

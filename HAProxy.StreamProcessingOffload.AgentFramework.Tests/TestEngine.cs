@@ -13,11 +13,11 @@ using Microsoft.Extensions.Logging.Abstractions;
 // https://github.com/dotnet/aspnetcore/blob/10beca5a9847902daad02198167d27964ac94cb2/src/SignalR/common/testassets/Tests.Utils/TestClient.cs
 public class TestEngine : IConnectionLifetimeNotificationFeature, IDisposable
 {
-    private readonly CancellationTokenSource cts;
+    internal readonly CancellationTokenSource cts;
     public DefaultConnectionContext Connection { get; }
     public CancellationToken ConnectionClosedRequested { get; set; }
 
-    private readonly SpopFrameProducer frameProducer;
+    internal readonly SpopFrameProducer frameProducer;
 
     public SpopPeerSettings PeerSettings { get; } = new SpopPeerSettings()
     {

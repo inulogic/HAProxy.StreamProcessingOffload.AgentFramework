@@ -35,7 +35,7 @@ public class SpopPeerSettings
 
     public string SupportedSpopVersion { get; set; }
 
-    public Fragmentation FragmentationCapabilities { get; private set; } = new Fragmentation();
+    public Fragmentation FragmentationCapabilities { get; internal set; } = new Fragmentation();
 
     public bool HasPipeliningCapabilities { get; set; }
 

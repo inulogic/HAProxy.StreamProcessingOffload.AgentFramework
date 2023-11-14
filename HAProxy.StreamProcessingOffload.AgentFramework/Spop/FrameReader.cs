@@ -420,7 +420,7 @@ public static class FrameReader
     }
 
 
-    private static bool TryReadBytes(ref this SequenceReader<byte> reader, long length, out byte[] value)
+    internal static bool TryReadBytes(ref this SequenceReader<byte> reader, long length, out byte[] value)
     {
         value = default;
         if (reader.Remaining < length)

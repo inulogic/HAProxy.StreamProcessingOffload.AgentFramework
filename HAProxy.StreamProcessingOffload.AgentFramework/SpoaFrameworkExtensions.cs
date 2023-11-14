@@ -20,25 +20,17 @@ public static class SpoaFrameworkExtensions
     }
 }
 
-public class SpoaFrameworkOptionsSetup : IConfigureOptions<KestrelServerOptions>
+public class SpoaFrameworkOptionsSetup(IOptions<SpoaFrameworkOptions> options) : IConfigureOptions<KestrelServerOptions>
 {
-    private readonly SpoaFrameworkOptions options;
-
-    public SpoaFrameworkOptionsSetup(IOptions<SpoaFrameworkOptions> options) => this.options = options.Value;
+    internal readonly SpoaFrameworkOptions options = options.Value;
 
     public void Configure(KestrelServerOptions options) => options.Listen(this.options.EndPoint, builder => builder.UseConnectionHandler<SpoaFrameworkConnectionHandler>());
 }
 
-public class SpoaFrameworkConnectionHandler : ConnectionHandler
+public class SpoaFrameworkConnectionHandler(ILogger<SpoaFrameworkConnectionHandler> logger, ISpoaApplication spoaApplication) : ConnectionHandler
 {
-    private readonly ILogger logger;
-    private readonly ISpoaApplication spoaApplication;
-
-    public SpoaFrameworkConnectionHandler(ILogger<SpoaFrameworkConnectionHandler> logger, ISpoaApplication spoaApplication)
-    {
-        this.logger = logger;
-        this.spoaApplication = spoaApplication;
-    }
+    internal readonly ILogger logger = logger;
+    internal readonly ISpoaApplication spoaApplication = spoaApplication;
 
     public override async Task OnConnectedAsync(ConnectionContext connection)
     {

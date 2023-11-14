@@ -1,26 +1,19 @@
 namespace HAProxy.StreamProcessingOffload.AgentFramework.Spop;
 using System;
-using System.Buffers;
 using System.IO.Pipelines;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 
-public class SpopFrameWriter
-{
-    private readonly object writeLock = new();
-    private readonly ILogger logger;
-    private readonly PipeWriter outputWriter;
-
-    private bool completed;
-
-    public SpopFrameWriter(
-        ILogger logger,
-        PipeWriter outputPipeWriter
+public class SpopFrameWriter(
+    ILogger logger,
+    PipeWriter outputPipeWriter
         )
-    {
-        this.logger = logger;
-        this.outputWriter = outputPipeWriter;
-    }
+{
+    internal readonly object writeLock = new();
+    internal readonly ILogger logger = logger;
+    internal readonly PipeWriter outputWriter = outputPipeWriter;
+
+    internal bool completed;
 
     public ValueTask<FlushResult> WriteFrame(in ReadOnlySpan<byte> metadataSpan, in ReadOnlySpan<byte> framePayload)
     {
@@ -50,7 +43,7 @@ public class SpopFrameWriter
         }
     }
 
-    private static void WriteFrame(IBufferWriter<byte> output, in ReadOnlySpan<byte> metadataSpan, in ReadOnlySpan<byte> framePayload)
+    internal static void WriteFrame(PipeWriter output, in ReadOnlySpan<byte> metadataSpan, in ReadOnlySpan<byte> framePayload)
     {
         var totalLength = metadataSpan.Length + framePayload.Length;
         var currentSpan = output.GetSpan(totalLength);

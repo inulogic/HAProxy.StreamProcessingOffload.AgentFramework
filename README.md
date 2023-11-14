@@ -73,37 +73,30 @@ Additionally, `example` folder contains a [Dockerfile](example/agent_haproxy_spo
 2. In `Program.cs`, Add Spoa Framework to a IWebHostBuilder.
 
     ```C#
-    class Program
+    var builder = WebApplication.CreateEmptyBuilder(new WebApplicationOptions()
     {
-        public static async Task Main(string[] args)
-        {
-            CreateHostBuilder(args).Build().Run();
-        }
+        Args = args
+    });
 
-        public static IHostBuilder CreateHostBuilder(string[] args) =>
-            Host.CreateDefaultBuilder(args)
-                .ConfigureWebHostDefaults(webBuilder =>
-                {
-                    webBuilder
-                        .ConfigureServices(services =>
-                        {
-                            services.Configure<SpoaFrameworkOptions>(options =>
-                            {
-                                options.EndPoint = new IPEndPoint(IPAddress.Loopback, 12345);
-                            });
-                            services.AddSingleton<ISpoaApplication, SpoaApplication>();
-                            services.AddSpoaFramework();
-                        })
-                        .UseStartup<Dummy>();
-                });
-    }
-
-    internal class Dummy
-    {
-        public void Configure(IApplicationBuilder app)
+    builder.WebHost
+        .UseKestrelCore()
+        .ConfigureLogging(logging =>
         {
-        }
-    }
+            logging.AddConsole();
+        })
+        .ConfigureServices(services =>
+        {
+            services.Configure<SpoaFrameworkOptions>(options =>
+            {
+                options.EndPoint = new IPEndPoint(IPAddress.Any, 12345);
+            });
+            services.AddSingleton<ISpoaApplication, SpoaApplication>();
+            services.AddSpoaFramework();
+        });
+
+    var app = builder.Build();
+
+    app.Run();
     ```
 
     Use your own Startup class if the Host is also serving Web content.
