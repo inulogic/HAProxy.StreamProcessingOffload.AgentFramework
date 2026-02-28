@@ -1,4 +1,4 @@
-FROM alpine:3.20 AS base
+FROM alpine:3.23 AS base
 WORKDIR /app
 EXPOSE 12345
 
